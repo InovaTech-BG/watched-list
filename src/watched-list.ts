@@ -1,4 +1,4 @@
-export abstract class WacthedList<T> {
+export abstract class WatchedList<T> {
 	private currentItems: T[];
 	private initial: T[];
 	private new: T[];
@@ -169,7 +169,7 @@ export abstract class WacthedList<T> {
 		return this.currentItems.length;
 	}
 
-	public map<U, K extends WacthedList<U>>(
+	public map<U, K extends WatchedList<U>>(
 		fn: (item: T) => U,
 		factory: (items: U[]) => K,
 	): K {
@@ -290,7 +290,7 @@ export abstract class WacthedList<T> {
 }
 
 export type WatchedListConstructor<T> = {
-	new (initialItems: T[]): WacthedList<T>;
+	new (initialItems: T[]): WatchedList<T>;
 };
 
-export type WacthedListValue<T> = T extends WacthedList<infer U> ? U : never;
+export type WacthedListValue<T> = T extends WatchedList<infer U> ? U : never;

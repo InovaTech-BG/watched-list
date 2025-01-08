@@ -1,6 +1,6 @@
-import { WacthedList } from "./watched-list";
+import { WatchedList } from "./watched-list";
 
-class NumberList extends WacthedList<number> {
+class NumberList extends WatchedList<number> {
 	compareItems(a: number, b: number): boolean {
 		return a === b;
 	}
@@ -121,7 +121,7 @@ describe("WatchedList Features", () => {
 	});
 
 	it("should be able to map the list", () => {
-		class MultipliedList extends WacthedList<number> {
+		class MultipliedList extends WatchedList<number> {
 			compareItems(a: number, b: number): boolean {
 				return a === b;
 			}
