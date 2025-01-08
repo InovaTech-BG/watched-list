@@ -293,4 +293,4 @@ export type WatchedListConstructor<T> = {
 	new (initialItems: T[]): WatchedList<T>;
 };
 
-export type WacthedListValue<T> = T extends WatchedList<infer U> ? U : never;
+export type WatchedListValue<T> = T extends WatchedList<infer U> ? U : never;
