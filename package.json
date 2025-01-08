@@ -1,0 +1,30 @@
+{
+  "name": "@inovatechbg/watched-list",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "scripts": {
+    "test": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/InovaTech-BG/watched-list.git"
+  },
+  "keywords": [
+    "watched",
+    "list"
+  ],
+  "author": "Brennon Gabriel de Oliveira",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/InovaTech-BG/watched-list/issues"
+  },
+  "homepage": "https://github.com/InovaTech-BG/watched-list#readme",
+  "description": "",
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.10.5",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

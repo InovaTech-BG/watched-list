@@ -1,0 +1,12 @@
+name: On Pull Request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  unit_tests:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      workflow_id: ${{ github.workflow }}

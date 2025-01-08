@@ -1,0 +1,107 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions: 
+  contents: write
+  actions: write
+
+jobs:
+  unit_tests:
+    uses: ./.github/workflows/unit-tests.yml
+    with:
+      workflow_id: ${{ github.workflow }}
+  create_release:
+    needs:  unit_tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Verificar se o commit está na branch main
+        id: check_main
+        run: |
+            echo "GITHUB_REF: $GITHUB_REF"
+            echo "GITHUB_SHA: $GITHUB_SHA"
+            git show-ref | grep "$(echo $GITHUB_SHA | cut -c1-7)"
+            git log --oneline -5
+
+            git fetch origin main
+
+            git checkout main 
+
+            cat << 'EOF' > check_commit_in_main.sh
+            #!/usr/bin/env bash
+            if git rev-list main | grep "$GITHUB_SHA"; then
+              echo "Commit está em main!"
+            else
+              echo "A tag não aponta para um commit em main."
+              exit 1
+            fi
+            EOF
+
+            chmod +x check_commit_in_main.sh
+            ./check_commit_in_main.sh
+            rm ./check_commit_in_main.sh
+
+      - name: Criar Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: "Release ${{ github.ref_name }}"
+          body: "Release gerada a partir do push de tag na branch main."
+          draft: false
+          prerelease: false
+  build:
+    needs: create_release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install
+      - run: pnpm build
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: https://registry.npmjs.org/
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install
+      - run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+  

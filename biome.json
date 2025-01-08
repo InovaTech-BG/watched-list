@@ -1,0 +1,39 @@
+{
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true,
+			"style": {
+				"noNonNullAssertion": "off",
+				"useImportType": {
+					"level": "off",
+					"fix": "none"
+				}
+			},
+			"complexity": {
+				"noBannedTypes": "off",
+				"noStaticOnlyClass": {
+					"level": "off"
+				}
+			},
+			"correctness": {
+				"noUnusedImports": {
+					"level": "error",
+					"fix": "safe"
+				}
+			}
+		}
+	},
+	"javascript": {
+		"parser": {
+			"unsafeParameterDecoratorsEnabled": true
+		}
+	},
+	"files": {
+		"ignore": ["./dist/**/*"]
+	},
+	"organizeImports": {
+		"enabled": true,
+		"include": ["./src/**/*.ts"]
+	}
+}
