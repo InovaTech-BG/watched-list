@@ -6,7 +6,9 @@
 	"types": "./dist/index.d.ts",
 	"files": ["dist", "./README.md"],
 	"scripts": {
-		"test": "vitest"
+		"build": "tsup",
+		"test:watch": "vitest",
+		"test": "vitest run"
 	},
 	"repository": {
 		"type": "git",
