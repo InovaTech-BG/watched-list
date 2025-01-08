@@ -1,177 +1,296 @@
 export abstract class WacthedList<T> {
-  private currentItems: T[]
-  private initial: T[]
-  private new: T[]
-  private removed: T[]
+	private currentItems: T[];
+	private initial: T[];
+	private new: T[];
+	private removed: T[];
 
-  constructor(initialItems: T[]) {
-    this.currentItems = initialItems ?? []
-    this.initial = initialItems ?? []
-    this.new = []
-    this.removed = []
-  }
+	[index: number]: T;
 
-  abstract compareItems(a: T, b: T): boolean
+	constructor(initialItems: T[]) {
+		this.currentItems = initialItems ?? [];
+		this.initial = initialItems ?? [];
+		this.new = [];
+		this.removed = [];
 
-  public get items(): T[] {
-    return this.currentItems
-  }
+		// biome-ignore lint:
+		return new Proxy(this, {
+			get: (target, prop, receiver) => {
+				if (typeof prop === "symbol") {
+					return Reflect.get(target, prop, receiver);
+				}
 
-  public get newItems(): T[] {
-    return this.new
-  }
+				if (prop === "length") {
+					return target.currentItems.length;
+				}
 
-  public get removedItems(): T[] {
-    return this.removed
-  }
+				const index = Number(prop);
+				if (!Number.isNaN(index)) {
+					return target.currentItems[index];
+				}
 
-  public isCurrentItem(item: T): boolean {
-    return (
-      this.currentItems.filter(
-        (currentItem) => this.compareItems(currentItem, item)
-      ).length !== 0
-    )
-  }
+				return Reflect.get(target, prop, receiver);
+			},
 
-  private isNewItem(item: T): boolean {
-    return (
-      this.new.filter((newItem) => this.compareItems(newItem, item)).length !== 0
-    )
-  }
+			set: (target, prop, value, receiver) => {
+				if (typeof prop === "symbol") {
+					return Reflect.set(target, prop, value, receiver);
+				}
 
-  private isRemovedItem(item: T): boolean {
-    return (
-      this.removed.filter((removedItem) => this.compareItems(removedItem, item))
-        .length !== 0
-    )
-  }
+				const index = Number(prop);
+				if (!Number.isNaN(index)) {
+					if (index >= 0 && index < target.currentItems.length) {
+						const oldItem = target.currentItems[index];
+						target.remove(oldItem);
+					}
 
-  private removeFromNew(item: T): void {
-    this.new = this.new.filter((newItem) => !this.compareItems(newItem, item))
-  }
+					target.add(value, index);
+					return true;
+				}
 
-  private removeFromCurrent(item: T): void {
-    this.currentItems = this.currentItems.filter(
-      (currentItem) => !this.compareItems(currentItem, item)
-    )
-  }
+				return Reflect.set(target, prop, value, receiver);
+			},
+		});
+	}
 
-  private removeFromRemoved(item: T): void {
-    this.removed = this.removed.filter(
-      (removedItem) => !this.compareItems(removedItem, item)
-    )
-  }
+	abstract compareItems(a: T, b: T): boolean;
 
-  private wasAddedIntially(item: T): boolean {
-    return (
-      this.initial.filter((initialItem) => this.compareItems(initialItem, item))
-        .length !== 0
-    )
-  }
+	public get items(): T[] {
+		return this.currentItems;
+	}
 
-  public add(item: T): void {
-    if(this.isRemovedItem(item)) {
-      this.removeFromRemoved(item)
-    }
+	public get newItems(): T[] {
+		return this.new;
+	}
 
-    if (!this.isNewItem(item) && !this.isCurrentItem(item)) {
-      this.new.push(item)
-    }
+	public get removedItems(): T[] {
+		return this.removed;
+	}
 
-    if (!this.isCurrentItem(item)) {
-      this.currentItems.push(item)
-    }
-  }
+	public isCurrentItem(item: T): boolean {
+		return (
+			this.currentItems.filter((currentItem) =>
+				this.compareItems(currentItem, item),
+			).length !== 0
+		);
+	}
 
-  public remove(item: T): void {
-    this.removeFromCurrent(item)
+	private isNewItem(item: T): boolean {
+		return (
+			this.new.filter((newItem) => this.compareItems(newItem, item)).length !==
+			0
+		);
+	}
 
-    if(this.isNewItem(item)) {
-      this.removeFromNew(item)
+	private isRemovedItem(item: T): boolean {
+		return (
+			this.removed.filter((removedItem) => this.compareItems(removedItem, item))
+				.length !== 0
+		);
+	}
 
-      return 
-    }
+	private removeFromNew(item: T): void {
+		this.new = this.new.filter((newItem) => !this.compareItems(newItem, item));
+	}
 
-    if(!this.isRemovedItem(item)) {
-      this.removed.push(item)
-    }
-  }
+	private removeFromCurrent(item: T): void {
+		this.currentItems = this.currentItems.filter(
+			(currentItem) => !this.compareItems(currentItem, item),
+		);
+	}
 
-  public update(items: T[]): void {
-    const newItems = items.filter((a) => {
-			return !this.items.some((b) => this.compareItems(a, b));
+	private removeFromRemoved(item: T): void {
+		this.removed = this.removed.filter(
+			(removedItem) => !this.compareItems(removedItem, item),
+		);
+	}
+
+	private wasAddedIntially(item: T): boolean {
+		return (
+			this.initial.filter((initialItem) => this.compareItems(initialItem, item))
+				.length !== 0
+		);
+	}
+
+	public add(item: T, index?: number): void {
+		if (this.isRemovedItem(item)) {
+			this.removeFromRemoved(item);
+		}
+
+		if (!this.isNewItem(item) && !this.wasAddedIntially(item)) {
+			this.new.push(item);
+		}
+
+		if (!this.isCurrentItem(item)) {
+			if (index) {
+				this.currentItems.splice(index, 0, item);
+			} else {
+				this.currentItems.push(item);
+			}
+		}
+	}
+
+	public remove(item: T): void {
+		this.removeFromCurrent(item);
+
+		if (this.isNewItem(item)) {
+			this.removeFromNew(item);
+
+			return;
+		}
+
+		if (!this.isRemovedItem(item)) {
+			this.removed.push(item);
+		}
+	}
+
+	public update(items: T[]): void {
+		const newItems = items.filter((a) => {
+			return !this.items.some(
+				(b) => this.compareItems(a, b) && !this.isRemovedItem(a),
+			);
 		});
 
 		const removedItems = this.items.filter((a) => {
-			return !items.some((b) => this.compareItems(a, b));
+			return !items.some((b) => this.compareItems(a, b)) && !this.isNewItem(a);
 		});
 
-    this.currentItems = items
-    this.new = newItems
-    this.removed = removedItems
-  }
+		this.currentItems = items;
+		this.new = newItems;
+		this.removed = removedItems;
+	}
 
-  public reset(): void {
-    this.currentItems = this.initial
-    this.new = []
-    this.removed = []
-  }
+	public reset(): void {
+		this.currentItems = this.initial;
+		this.new = [];
+		this.removed = [];
+	}
 
-  public map<U>(fn: (item: T) => U): U[] {
-    return this.currentItems.map(fn)
-  }
+	public get length(): number {
+		return this.currentItems.length;
+	}
 
-  public filter(fn: (item: T) => boolean): T[] {
-    return this.currentItems.filter(fn)
-  }
+	public map<U, K extends WacthedList<U>>(
+		fn: (item: T) => U,
+		factory: (items: U[]) => K,
+	): K {
+		const mappedItems = this.currentItems.map(fn);
+		return factory(mappedItems);
+	}
 
-  public find(fn: (item: T) => boolean): T | undefined {
-    return this.currentItems.find(fn)
-  }
+	public mapToArray<U>(fn: (item: T) => U): U[] {
+		return this.currentItems.map(fn);
+	}
 
-  public some(fn: (item: T) => boolean): boolean {
-    return this.currentItems.some(fn)
-  }
+	public filter(fn: (item: T) => boolean, selfUpdate?: true): never;
+	public filter(fn: (item: T) => boolean, selfUpdate?: false): this;
+	public filter(
+		fn: (item: T) => boolean,
+		selfUpdate: true | false = true,
+	): never | this {
+		const filteredItems = this.currentItems.filter(fn);
+		if (selfUpdate) {
+			this.update(filteredItems);
+			return this;
+		}
 
-  public every(fn: (item: T) => boolean): boolean {
-    return this.currentItems.every(fn)
-  }
+		type self = this;
+		const ctor = this.constructor as {
+			new (items: T[]): self;
+		};
 
-  public forEach(fn: (item: T) => void): void {
-    this.currentItems.forEach(fn)
-  }
+		return new ctor(filteredItems);
+	}
 
-  public includes(item: T): boolean {
-    return this.currentItems.includes(item)
-  }
+	public find(item: T): T | undefined;
+	public find(fn: (item: T) => boolean): T | undefined;
+	public find(fn: T | ((item: T) => boolean)): T | undefined {
+		if (fn instanceof Function) {
+			return this.currentItems.find(fn);
+		}
+		return this.currentItems.find((item) => this.compareItems(item, fn));
+	}
 
-  public indexOf(item: T): number {
-    return this.currentItems.indexOf(item)
-  }
+	public lastFind(item: T): T | undefined;
+	public lastFind(fn: (item: T) => boolean): T | undefined;
+	public lastFind(fn: T | ((item: T) => boolean)): T | undefined {
+		if (fn instanceof Function) {
+			return this.currentItems.reverse().find(fn);
+		}
+		return this.currentItems
+			.reverse()
+			.find((item) => this.compareItems(item, fn));
+	}
 
-  public lastIndexOf(item: T): number {
-    return this.currentItems.lastIndexOf(item)
-  }
+	public some(fn: (item: T) => boolean): boolean {
+		return this.currentItems.some(fn);
+	}
 
-  public join(separator?: string): string {
-    return this.currentItems.join(separator)
-  }
+	public every(fn: (item: T) => boolean): boolean {
+		return this.currentItems.every(fn);
+	}
 
-  public slice(start?: number, end?: number): T[] {
-    return this.currentItems.slice(start, end)
-  }
+	public forEach(fn: (item: T, list: this) => void): void {
+		for (const item of this.currentItems) {
+			fn(item, this);
+		}
+	}
 
-  public toString(): string {
-    return this.currentItems.toString()
-  }
+	public includes(item: T): boolean {
+		return this.isCurrentItem(item);
+	}
 
-  public toLocaleString(): string {
-    return this.currentItems.toLocaleString()
-  }
+	public deepIncludes(item: T): boolean {
+		return this.currentItems.includes(item);
+	}
 
-  public concat(...items: ConcatArray<T>[]): T[] {
-    return this.currentItems.concat(...items)
-  }
+	public indexOf(item: T, fromIndex?: number): number {
+		return this.currentItems.indexOf(item, fromIndex);
+	}
+
+	public lastIndexOf(item: T, fromIndex?: number): number {
+		return this.currentItems.lastIndexOf(
+			item,
+			fromIndex ?? this.currentItems.length,
+		);
+	}
+
+	public join(separator?: string): string {
+		return this.currentItems.join(separator);
+	}
+
+	public slice(start?: number, end?: number): T[] {
+		return this.currentItems.slice(start, end);
+	}
+
+	public toString(): string {
+		return this.currentItems.toString();
+	}
+
+	public toLocaleString(): string {
+		return this.currentItems.toLocaleString();
+	}
+
+	public concat(items: ConcatArray<T>, selfUpdate: true): never;
+	public concat(items: ConcatArray<T>, selfUpdate: false): this;
+	public concat(items: ConcatArray<T>): never;
+	public concat(items: ConcatArray<T>, selfUpdate = true): this | never {
+		const finalItems = this.currentItems.concat(items);
+		if (selfUpdate) {
+			this.update(finalItems);
+			return this;
+		}
+
+		type self = this;
+		const ctor = this.constructor as {
+			new (_items: T[]): self;
+		};
+
+		return new ctor(finalItems);
+	}
 }
 
-export type WacthedListValue<T> = T extends WacthedList<infer U> ? U : never
+export type WatchedListConstructor<T> = {
+	new (initialItems: T[]): WacthedList<T>;
+};
+
+export type WacthedListValue<T> = T extends WacthedList<infer U> ? U : never;
